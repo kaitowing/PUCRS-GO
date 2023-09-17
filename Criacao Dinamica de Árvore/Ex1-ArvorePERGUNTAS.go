@@ -31,37 +31,87 @@ type Nodo struct {
 }
 
 func retornaParImpar(r *Nodo, saidaP chan int, saidaI chan int, fin chan string) {
-	if (r == nil) {
-		return
-	}
-	if r.v%2 == 0 {
-		saidaP <- r.v
-		} else {
-			saidaI <- r.v
-		}
-		
-		retornaParImpar(r.e, saidaP, saidaI, fin)
-		retornaParImpar(r.d, saidaP, saidaI, fin)
-		fin <- "Fim"
+	retornaParImparImpl(r, saidaP, saidaI)
+	fin <- "Fim"
 }
 
+func retornaParImparAux(root *Nodo){
+	saidaPar := make(chan int)
+	saidaImpar := make(chan int)
 
-func retornaParImparConc(r *Nodo, saidaP chan int, saidaI chan int, fin chan struct{}) {
-    if r == nil {
-        fin <- struct{}{}
-        return
-    }
+	fin := make(chan string)
 
-    go retornaParImparConc(r.e, saidaP, saidaI, fin)
-    go retornaParImparConc(r.d, saidaP, saidaI, fin)
+	go retornaParImpar(root, saidaPar, saidaImpar, fin)
 
-    if r.v%2 == 0 {
-        saidaP <- r.v
+	for {
+		select {
+		case fim := <-fin:
+			fmt.Println(fim)
+			return
+		case par := <-saidaPar:
+			fmt.Println("Par: ", par)
+		case impar := <-saidaImpar:
+			fmt.Println("Impar: ", impar)
+		}
+	}
+}
+
+func retornaParImparImpl(r *Nodo, saidaP chan int, saidaI chan int) {
+	if r == nil {
+		return
+	}
+
+	if r.v%2 == 0 {
+		saidaP <- r.v
+	} else {
+		saidaI <- r.v
+	}
+
+	retornaParImparImpl(r.e, saidaP, saidaI)
+	retornaParImparImpl(r.d, saidaP, saidaI)
+}
+
+func retornaParImparConcAux(root *Nodo){
+	saidaPar := make(chan int)
+	saidaImpar := make(chan int)
+
+	fin := make(chan string)
+
+	go retornaParImparConc(root, saidaPar, saidaImpar, fin)
+
+	for {
+		select {
+		case fim := <-fin:
+			fmt.Println(fim)
+			return
+		case par := <-saidaPar:
+			fmt.Println("Par: ", par)
+		case impar := <-saidaImpar:
+			fmt.Println("Impar: ", impar)
+		}
+	}
+}
+
+func retornaParImparConc(r *Nodo, saidaP chan int, saidaI chan int, fin chan string) {
+	retornaParImparConcImpl(r, saidaP, saidaI)
+	fin <- "Fim"
+}
+
+func retornaParImparConcImpl(r *Nodo, saidaP chan int, saidaI chan int) {
+	if r == nil {
+		return
+	}
+
+	go retornaParImparConcImpl(r.e, saidaP, saidaI)
+	go retornaParImparConcImpl(r.d, saidaP, saidaI)
+
+	if r.v%2 == 0 {
+		saidaP <- r.v
 		fmt.Println("Par: ", <-saidaP)
-    } else {
-        saidaI <- r.v
+	} else {
+		saidaI <- r.v
 		fmt.Println("Impar: ", <-saidaI)
-    }
+	}
 }
 
 func caminhaERD(r *Nodo) {
@@ -158,34 +208,20 @@ func main() {
 	caminhaERD(root)
 	fmt.Println()
 	fmt.Println()
-	
-	fmt.Println("Busca: ", busca(root, 10))
-	
+
+	fmt.Println("Busca: ", busca(root, 45))
+
+	fmt.Println("BuscaConc: ", buscaConc(root, 23))
+
 	fmt.Println("Soma: ", soma(root))
 	fmt.Println("SomaConc: ", somaConc(root))
-	
+
 	fmt.Println("Retorna Par e Impar:")
 
-	// Canais bufferizados para mensagens de saída
-	saidaPar := make(chan int)
-	saidaImpar := make(chan int)
+	retornaParImparAux(root)
+	
+	fmt.Println("Retorna Par e Impar Conc:")
 
-	// Canal para sinalizar o fim
-	fim := make(chan string)
-
-	// Iniciar a função em uma goroutine
-	go retornaParImpar(root, saidaPar, saidaImpar, fim)
-
-	for {
-		select {
-		case <-fim:
-			fmt.Println("Fim")
-		case par := <-saidaPar:
-			fmt.Println("Par: ", par)
-		case impar := <-saidaImpar:
-			fmt.Println("Impar: ", impar)
-		}
-	}
-
-
+	retornaParImparConcAux(root)
+	
 }
