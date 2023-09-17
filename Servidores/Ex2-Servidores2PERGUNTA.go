@@ -41,26 +41,32 @@ func cliente(i int, req chan Request) {
 		v = rand.Intn(1000)
 		req <- Request{v, my_ch}
 		r = <-my_ch
-		fmt.Println("cli: ", i, " req: ", v, "  resp:", r)
+	  fmt.Println("cli: ", i, " req: ", v, "  resp:", r)
 	}
 }
 
 // ------------------------------------
 // servidor
 // thread de servico calcula a resposta e manda direto pelo canal de retorno informado pelo cliente
-func trataReq(id int, req Request) {
-	fmt.Println("                                 trataReq ", id)
+func trataReq(id *int, req Request) {
+  fmt.Println("                                 trataReq ", *id)
 	req.ch_ret <- req.v * 2
+	fmt.Println("                                 fim trataReq ", *id)
+	*id--
 }
 
 // servidor que dispara threads de servico
 func servidorConc(in chan Request) {
 	// servidor fica em loop eterno recebendo pedidos e criando um processo concorrente para tratar cada pedido
-	var j int = 0
+	var j *int = new(int)
+	*j = 0
+	
 	for {
-		j++
-		req := <-in
-		go trataReq(j, req)
+		if(*j < 10){
+			*j++
+			req := <-in
+			go trataReq(j, req)
+		}
 	}
 }
 

@@ -22,36 +22,48 @@ type carta string      // carta é um strirng
 
 var ch [NJ]chan carta  // NJ canais de itens tipo carta  
 
-func jogador(id int, in chan carta, out chan carta, cartasIniciais []carta, ... ) {
+func horaDeBater(cartas []carta) bool {
+	 if (cartas[0] == cartas[1] && cartas[1] == cartas[2] && cartas[2] == cartas[3]) {
+		 return true
+	 } else {
+		 return false
+	 }
+}
+
+func jogador(id int, in chan carta, out chan carta, cartasIniciais []carta, batida chan bool) {
 	mao := cartasIniciais    // estado local - as cartas na mao do jogador
 	nroDeCartas := M         // quantas cartas ele tem 
-    cartaRecebida := " "     // carta recebida é vazia
+  cartaRecebida := " "     // carta recebida é vazia
 
 	for {
-		if // tenho que jogar
-			{
-			fmt.Println(id, " joga") // escreve seu identificador
-			// escolhe alguma carta para passar adiante ...
-			// guarda carta que entrou 
-			// manda carta escolhida o proximo
-			out <- cartaParaSair        
-		} else {  
-			// ...
-			cartaRecebida := <-in   // recebe carta na entrada
-			//  ...
-			// e se alguem bate ?
+		select{
+		case bateu := <-batida:
+			fmt.Println(id, " bateu")
+			return
+		default:
+			fmt.Println(id, " joga")
+			if (nroDeCartas == 4) {
+				out <- mao[3]
+			} else {
+				if(horaDeBater(mao)){
+					batida <- true
+				} else {
+					out <- cartaRecebida
+				}
+			}
 		}
 	}
 }
 
 func main() {
+	
 	for i := 0; i < NJ; i++ {
 		ch[i] = make(chan struct{})
 	}
 	// cria um baralho com NJ*M cartas
 	for i := 0; i < NJ; i++ {
 		// escolhe aleatoriamente (tira) cartas do baralho, passa cartas para jogador
-		go jogador(i, ch[i], ch[(i+1)%N], cartasEscolhidas , ...) // cria processos conectados circularmente
+		go jogador(i, ch[i], ch[(i+1)%N], cartasEscolhidas , batida) // cria processos conectados circularmente
 	}
 	
 	<-make(chan struct{}) // bloqueia

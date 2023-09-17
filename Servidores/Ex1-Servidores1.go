@@ -47,13 +47,31 @@ func servidorSeq(in chan Request) {
 	}
 }
 
+func trataReq(id int, req Request) {
+	fmt.Println("                                 trataReq ", id)
+	req.ch_ret <- req.v * 2
+	fmt.Println("                                 fim trataReq ", id)
+}
+
+// servidor que dispara threads de servico
+func servidorConc(in chan Request) {
+	// servidor fica em loop eterno recebendo pedidos e criando um processo concorrente para tratar cada pedido
+	var j int = 0
+	for {
+		j++
+		req := <-in
+		go trataReq(j, req)
+	}
+}
+
 // ------------------------------------
 // main
 func main() {
 	fmt.Println("------ Servidores Sequencial -------")
 	serv_chan := make(chan Request)
+	go servidorConc(serv_chan)
 	for i := 0; i < NCL; i++ {
 		go cliente(i, serv_chan)
 	}
-	servidorSeq(serv_chan)
+	<-make(chan int)
 }

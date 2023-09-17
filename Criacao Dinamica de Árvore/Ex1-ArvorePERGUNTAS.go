@@ -221,7 +221,7 @@ func main() {
 	retornaParImparAux(root)
 	
 	fmt.Println("Retorna Par e Impar Conc:")
-
+				
 	retornaParImparConcAux(root)
 	
 }
