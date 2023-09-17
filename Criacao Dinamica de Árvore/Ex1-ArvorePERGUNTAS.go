@@ -30,33 +30,38 @@ type Nodo struct {
 	d *Nodo
 }
 
-func escreveParImparConc(r *Nodo, saidaP chan int, saidaI chan int, fin chan struct{}) {
-	if r != nil {
-		if r.v%2 == 0 {
-			saidaP <- r.v
+func retornaParImpar(r *Nodo, saidaP chan int, saidaI chan int, fin chan string) {
+	if (r == nil) {
+		return
+	}
+	if r.v%2 == 0 {
+		saidaP <- r.v
 		} else {
 			saidaI <- r.v
 		}
-		escreveParImpar(r.e, saidaP, saidaI, fin)
-		escreveParImpar(r.d, saidaP, saidaI, fin)
-	} else {
-		fin <- struct{}{}
-	}
+		
+		retornaParImpar(r.e, saidaP, saidaI, fin)
+		retornaParImpar(r.d, saidaP, saidaI, fin)
+		fin <- "Fim"
 }
 
-func escreveParImpar(r *Nodo, par chan int, impar chan int, fin chan struct{}){
-	go escreveParImparConc(r, par, impar, fin)
-	for {
-		select {
-		case par := <-par:
-			fmt.Println(par)
-		case impar := <-impar:
-			fmt.Println(impar)
-		case <-fin:
-			fmt.Println("Fim")
-			return
-		}
-	}
+
+func retornaParImparConc(r *Nodo, saidaP chan int, saidaI chan int, fin chan struct{}) {
+    if r == nil {
+        fin <- struct{}{}
+        return
+    }
+
+    go retornaParImparConc(r.e, saidaP, saidaI, fin)
+    go retornaParImparConc(r.d, saidaP, saidaI, fin)
+
+    if r.v%2 == 0 {
+        saidaP <- r.v
+		fmt.Println("Par: ", <-saidaP)
+    } else {
+        saidaI <- r.v
+		fmt.Println("Impar: ", <-saidaI)
+    }
 }
 
 func caminhaERD(r *Nodo) {
@@ -96,7 +101,7 @@ func somaConcCh(r *Nodo, s chan int) {
 	}
 }
 
-func busca(r* Nodo, v int) bool {
+func busca(r *Nodo, v int) bool {
 	if r != nil {
 		if r.v == v {
 			return true
@@ -107,13 +112,13 @@ func busca(r* Nodo, v int) bool {
 	return false
 }
 
-func buscaConc(r* Nodo, v int) bool {
+func buscaConc(r *Nodo, v int) bool {
 	s := make(chan bool)
 	go buscaConcCh(r, v, s)
 	return <-s
 }
 
-func buscaConcCh(r* Nodo, v int, s chan bool){
+func buscaConcCh(r *Nodo, v int, s chan bool) {
 	if r != nil {
 		if r.v == v {
 			s <- true
@@ -128,8 +133,6 @@ func buscaConcCh(r* Nodo, v int, s chan bool){
 		s <- false
 	}
 }
-
-
 
 // ---------   agora vamos criar a arvore e usar as funcoes acima
 
@@ -155,18 +158,34 @@ func main() {
 	caminhaERD(root)
 	fmt.Println()
 	fmt.Println()
-	par := make(chan int)
-	imp := make(chan int)
-
 	
 	fmt.Println("Busca: ", busca(root, 10))
 	
 	fmt.Println("Soma: ", soma(root))
 	fmt.Println("SomaConc: ", somaConc(root))
+	
+	fmt.Println("Retorna Par e Impar:")
 
-	escreveParImpar(root, par, imp, make(chan struct{}))
-	fmt.Println(par)
-	fmt.Println(imp)
-	fmt.Println()
+	// Canais bufferizados para mensagens de saída
+	saidaPar := make(chan int)
+	saidaImpar := make(chan int)
+
+	// Canal para sinalizar o fim
+	fim := make(chan string)
+
+	// Iniciar a função em uma goroutine
+	go retornaParImpar(root, saidaPar, saidaImpar, fim)
+
+	for {
+		select {
+		case <-fim:
+			fmt.Println("Fim")
+		case par := <-saidaPar:
+			fmt.Println("Par: ", par)
+		case impar := <-saidaImpar:
+			fmt.Println("Impar: ", impar)
+		}
+	}
+
 
 }
